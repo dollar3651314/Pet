@@ -1,0 +1,347 @@
+<title>狗狗营养计算器</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 布局：左边填信息，右边看结果；手机上上下排。像一张兽医的营养单。 */
+:root{
+  --bg:#f5f6f3; --panel:#ffffff; --ink:#1c2422; --muted:#5d6a66; --line:#d9dfdb;
+  --accent:#1f6b5e; --accent-soft:#e3efeb; --warn:#9a3b1f; --warn-soft:#fbe9e2; --note:#7a5a12; --note-soft:#fbf3dc;
+  --f-body:"IBM Plex Sans","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121816; --panel:#1a2220; --ink:#e4ebe8; --muted:#9aa8a3; --line:#2c3734;
+  --accent:#5fc2ad; --accent-soft:#1d3530; --warn:#f19a7c; --warn-soft:#3a2219; --note:#e3c172; --note-soft:#342b14; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121816; --panel:#1a2220; --ink:#e4ebe8; --muted:#9aa8a3; --line:#2c3734;
+  --accent:#5fc2ad; --accent-soft:#1d3530; --warn:#f19a7c; --warn-soft:#3a2219; --note:#e3c172; --note-soft:#342b14; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header h1{font-size:26px;line-height:1.25;margin:0;font-weight:600;text-wrap:balance}
+header p{margin:6px 0 0;color:var(--muted);max-width:68ch}
+.grid{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+form{display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field>label,.legend{font-size:13px;font-weight:600;letter-spacing:.02em}
+.hint{font-size:12px;color:var(--muted)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1 1 120px;min-width:0}
+input[type=number],select{font:inherit;font-family:var(--f-num);width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+select{font-family:var(--f-body)}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:14px}
+.seg input{accent-color:var(--accent)}
+.seg label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+fieldset{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+[data-puppy]{display:flex;flex-direction:column;gap:5px}
+.results{display:flex;flex-direction:column;gap:16px;min-width:0}
+.energy{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.stat{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--panel)}
+.stat.main{border-color:var(--accent);background:var(--accent-soft)}
+.stat .k{font-size:12px;color:var(--muted);letter-spacing:.03em}
+.stat .v{font-family:var(--f-num);font-size:28px;font-weight:500;line-height:1.2;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:14px;color:var(--muted);font-family:var(--f-body)}
+.stat .s{font-size:12px;color:var(--muted)}
+.banner{border-radius:8px;padding:12px 14px;font-size:14px}
+.banner.warn{background:var(--warn-soft);color:var(--ink);border-left:4px solid var(--warn)}
+.banner.note{background:var(--note-soft);color:var(--ink);border-left:4px solid var(--note)}
+.banner strong{color:var(--warn)}
+.banner.note strong{color:var(--note)}
+.banner ul{margin:6px 0 0;padding-left:18px}
+h2{font-size:17px;margin:0;font-weight:600}
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:14px}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.03em;background:var(--bg)}
+td.n{font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.key td:first-child{font-weight:600}
+tr:last-child td{border-bottom:0}
+.dim table{opacity:.55}
+details{border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+details>summary{cursor:pointer;padding:10px 14px;font-weight:600}
+details .tablebox{border:0;border-top:1px solid var(--line);border-radius:0 0 8px 8px}
+.foot{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.foot a{color:var(--accent)}
+.tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:4px;border:1px solid var(--line);color:var(--muted);margin-left:4px;vertical-align:1px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>狗狗营养计算器</h1>
+    <p>输入狗的情况，算出它<strong>每天要多少热量</strong>，以及每天<strong>每种营养至少要多少、最多不能超过多少</strong>。标准用欧洲宠物食品联合会 FEDIAF 2024 和美国宠物营养联盟（PNA）的公开公式。演示版，不能代替兽医。</p>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-label="填写狗的信息">
+      <form id="f" autocomplete="off">
+        <div class="field">
+          <label for="w">现在体重（kg）</label>
+          <input id="w" type="number" min="0.5" max="100" step="0.1" value="10">
+        </div>
+        <div class="field">
+          <span class="legend">年龄</span>
+          <div class="row">
+            <select id="ay" aria-label="岁"></select>
+            <select id="am" aria-label="月"></select>
+          </div>
+        </div>
+        <div data-puppy class="field" id="puppyBox" hidden>
+          <label for="mw">预计长大后的体重（kg）</label>
+          <input id="mw" type="number" min="1" max="100" step="0.5" value="10">
+          <span class="hint">不满 1 岁要填。不知道就按品种的常见体重填，或者问兽医。</span>
+        </div>
+        <fieldset>
+          <span class="legend">是否绝育</span>
+          <div class="seg">
+            <label><input type="radio" name="neuter" value="1" checked>已绝育</label>
+            <label><input type="radio" name="neuter" value="0">未绝育</label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <span class="legend">活动量</span>
+          <div class="seg">
+            <label><input type="radio" name="act" value="low">少（基本在家）</label>
+            <label><input type="radio" name="act" value="mid" checked>正常（每天遛 1 小时左右）</label>
+            <label><input type="radio" name="act" value="high">多（跑跳很多）</label>
+          </div>
+        </fieldset>
+        <div class="field">
+          <label for="bcs">胖瘦（摸肋骨）</label>
+          <select id="bcs">
+            <option value="thin">偏瘦：一眼能看到肋骨、腰骨</option>
+            <option value="ideal" selected>正好：轻轻一摸就能摸到肋骨，有腰身</option>
+            <option value="over">偏胖：要用力才摸得到肋骨，腰身不明显</option>
+            <option value="obese">肥胖：摸不到肋骨，肚子下垂</option>
+          </select>
+        </div>
+        <fieldset>
+          <span class="legend">已知的病（可多选）</span>
+          <div class="seg" id="dz">
+            <label><input type="checkbox" value="ckd">肾病</label>
+            <label><input type="checkbox" value="panc">胰腺炎</label>
+            <label><input type="checkbox" value="dm">糖尿病</label>
+            <label><input type="checkbox" value="allergy">食物过敏</label>
+            <label><input type="checkbox" value="stone">尿结石</label>
+            <label><input type="checkbox" value="heart">心脏病</label>
+            <label><input type="checkbox" value="liver">肝病</label>
+            <label><input type="checkbox" value="preg">怀孕 / 哺乳</label>
+          </div>
+        </fieldset>
+        <div class="field">
+          <label for="kd">打算喂的食物热量（kcal / 100 g，选填）</label>
+          <input id="kd" type="number" min="20" max="600" step="1" placeholder="例如成品鲜食包装上写的 130">
+          <span class="hint">填了就能算出每天喂多少克。成品鲜食、狗粮包装上一般都有。</span>
+        </div>
+      </form>
+    </section>
+
+    <section class="results" aria-live="polite">
+      <div class="energy" id="energy"></div>
+      <div id="banners"></div>
+      <div>
+        <h2>每天的营养目标 <span class="tag" id="colTag"></span></h2>
+      </div>
+      <div class="tablebox" id="keyBox"><table id="keyT"></table></div>
+      <details>
+        <summary>全部 40 多项营养（氨基酸、维生素、微量元素）</summary>
+        <div class="tablebox"><table id="allT"></table></div>
+      </details>
+      <div class="foot">
+        <span><strong>怎么算的：</strong>①静息热量 RER = 70 × 体重<sup>0.75</sup>；成年犬每天热量 = RER × 系数（已绝育 1.6、未绝育 1.8、活动少 1.4、减重 1.0，来自 PNA）。②幼犬用 FEDIAF 公式 (254.1 − 135 × 现体重 / 成年体重) × 现体重<sup>0.75</sup>。③每天的营养目标 = 每天热量 × FEDIAF 2024 表 III-3b 每 1000 kcal 的标准。</span>
+        <span><strong>还没做的：</strong>按食材自动配克数（要先核对中国食材成分数据）。所以这里只给“目标”，不给配方。</span>
+        <span>出处：<a href="https://europeanpetfood.org/wp-content/uploads/2024/09/FEDIAF-Nutritional-Guidelines_2024.pdf" target="_blank" rel="noopener">FEDIAF Nutritional Guidelines 2024</a> · <a href="https://petnutritionalliance.org/wp-content/uploads/2023/03/MER.RER_.PNA_.pdf" target="_blank" rel="noopener">PNA 热量系数表</a> · <a href="https://dvm360.com/view/renal-diets-veterinary-patients-what-feed-and-when-start" target="_blank" rel="noopener">Heinze：肾病饮食</a></span>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script id="calc">
+// FEDIAF 2024 表 III-3b：每 1000 kcal ME 的最低推荐量。列：成年(95)、成年(110)、早期生长(<14 周)、后期生长(≥14 周)
+const N = [
+  // [名称, 单位, a95, a110, early, late, 重点?, 上限说明{adult, early, late}]
+  ["蛋白质","g",52.10,45.00,62.50,50.00,1],
+  ["精氨酸","g",1.51,1.30,2.04,1.84],
+  ["组氨酸","g",0.67,0.58,0.98,0.63],
+  ["异亮氨酸","g",1.33,1.15,1.63,1.25],
+  ["亮氨酸","g",2.37,2.05,3.23,2.00],
+  ["赖氨酸","g",1.22,1.05,2.20,1.75,0,{early:7.00,late:7.00}],
+  ["蛋氨酸","g",1.16,1.00,0.88,0.65],
+  ["蛋氨酸 + 胱氨酸","g",2.21,1.91,1.75,1.33],
+  ["苯丙氨酸","g",1.56,1.35,1.63,1.25],
+  ["苯丙氨酸 + 酪氨酸","g",2.58,2.23,3.25,2.50],
+  ["苏氨酸","g",1.51,1.30,2.03,1.60],
+  ["色氨酸","g",0.49,0.43,0.58,0.53],
+  ["缬氨酸","g",1.71,1.48,1.70,1.40],
+  ["脂肪","g",13.75,13.75,21.25,21.25,1],
+  ["亚油酸（ω-6）","g",3.82,3.27,3.25,3.25,0,{early:16.25}],
+  ["花生四烯酸（ω-6）","mg",null,null,75,75],
+  ["α-亚麻酸（ω-3）","g",null,null,0.20,0.20],
+  ["EPA + DHA（ω-3）","g",null,null,0.13,0.13,1],
+  ["钙","g",1.45,1.25,2.50,"CA",1,{adult:6.25,early:4.00,late:4.50}],
+  ["磷","g",1.16,1.00,2.25,1.75,1,{adult:4.00}],
+  ["钾","g",1.45,1.25,1.10,1.10],
+  ["钠","g",0.29,0.25,0.55,0.55],
+  ["氯","g",0.43,0.38,0.83,0.83],
+  ["镁","g",0.20,0.18,0.10,0.10],
+  ["铜","mg",2.08,1.80,2.75,2.75,1],
+  ["碘","mg",0.30,0.26,0.38,0.38,1],
+  ["铁","mg",10.40,9.00,22.00,22.00],
+  ["锰","mg",1.67,1.44,1.40,1.40],
+  ["硒（湿粮）","µg",67.50,57.50,100,100],
+  ["锌","mg",20.80,18.00,25.00,25.00,1],
+  ["维生素 A","IU",1754,1515,1250,1250,0,{adult:100000,early:100000,late:100000}],
+  ["维生素 D","IU",159,138,138,125,1,{adult:800,early:800,late:800}],
+  ["维生素 E","IU",10.40,9.00,12.50,12.50,1],
+  ["维生素 B1","mg",0.62,0.54,0.45,0.45],
+  ["维生素 B2","mg",1.74,1.50,1.05,1.05],
+  ["泛酸（B5）","mg",4.11,3.55,3.00,3.00],
+  ["维生素 B6","mg",0.42,0.36,0.30,0.30],
+  ["维生素 B12","µg",9.68,8.36,7.00,7.00],
+  ["烟酸（B3）","mg",4.74,4.09,3.40,3.40],
+  ["叶酸","µg",74.7,64.5,54.0,54.0],
+  ["胆碱","mg",474,409,425,425,1],
+];
+
+function calc(p){
+  // p: {w, ageMonths, mature, neutered, act, bcs, kd}
+  const out = {flags:[]};
+  const w = p.w, months = p.ageMonths;
+  const mbw = Math.pow(w, 0.75);
+  out.rer = 70 * mbw;
+  if (months < 2){ out.tooYoung = true; return out; }
+  if (months < 12){
+    out.stage = months < 3.25 ? "early" : "late"; // 14 周 ≈ 3.25 个月
+    const ratio = Math.min(p.mature > 0 ? w / p.mature : 0.5, 1);
+    out.kcal = (254.1 - 135.0 * ratio) * mbw;
+    out.method = "幼犬：FEDIAF 生长公式";
+    out.range = null;
+    if (p.mature > 15 && months < 6) { out.caLate = 2.5; out.caP = "1:1 ～ 1.6:1"; }
+    else { out.caLate = 2.0; out.caP = out.stage === "early" ? "1:1 ～ 1.6:1" : "1:1 ～ 1.8:1"; }
+    if (out.stage === "early") out.caP = "1:1 ～ 1.6:1";
+    out.large = p.mature > 15;
+  } else {
+    let f = p.neutered ? 1.6 : 1.8, why = p.neutered ? "已绝育 1.6" : "未绝育 1.8";
+    if (p.act === "low"){ f = 1.4; why = "活动少 1.4"; }
+    if (p.act === "high"){ f = p.neutered ? 1.8 : 2.0; why = p.neutered ? "活动多 1.8" : "活动多 2.0"; }
+    if (p.bcs === "over" || p.bcs === "obese"){ f = 1.0; why = "需要减重 1.0"; }
+    out.factor = f; out.method = "RER × " + why;
+    out.kcal = out.rer * f;
+    const yrs = months / 12;
+    const ref = yrs < 3 ? [130,125,140,"1～2 岁"] : yrs <= 7 ? [110,95,130,"3～7 岁"] : [95,80,120,"7 岁以上"];
+    out.range = {lo: ref[1]*mbw, hi: ref[2]*mbw, mid: ref[0]*mbw, label: ref[3]};
+    // 每天实际吃的热量 / 体重^0.75 越低，营养要越浓：≤102.5 用 95 那一列（取 95 和 110 的中点，推断）
+    out.stage = (out.kcal / mbw) <= 102.5 ? "a95" : "a110";
+    out.senior = yrs > 7;
+  }
+  if (p.kd > 0) out.grams = out.kcal / p.kd * 100;
+  return out;
+}
+
+function targets(r){
+  const col = {a95:2, a110:3, early:4, late:5}[r.stage];
+  const maxKey = r.stage === "early" ? "early" : r.stage === "late" ? "late" : "adult";
+  return N.map(n => {
+    let v = n[col];
+    if (v === "CA") v = r.caLate;
+    const max = n[7] && n[7][maxKey] != null ? n[7][maxKey] : null;
+    return {name:n[0], unit:n[1], per1000:v, day: v == null ? null : v * r.kcal / 1000,
+            maxDay: max == null ? null : max * r.kcal / 1000, key: !!n[6]};
+  });
+}
+</script>
+
+<script>
+const $ = id => document.getElementById(id);
+const ay = $("ay"), am = $("am");
+for (let i = 0; i <= 20; i++) ay.add(new Option(i + " 岁", i));
+for (let i = 0; i <= 11; i++) am.add(new Option(i + " 个月", i));
+ay.value = "4"; am.value = "0";
+
+const DZ = {
+  ckd:"<strong>肾病</strong>：最关键的是<strong>限磷</strong>。早期可以先选磷低于 1.5 g / 1000 kcal 的饮食；3 期或有蛋白尿，大多数只应吃处方肾病粮。下面表里的磷目标是健康狗的，不适用。",
+  panc:"<strong>胰腺炎</strong>：要低脂，常见建议是脂肪低于 30 g / 1000 kcal，严重的更低，以血脂和不再复发为准（二手资料）。",
+  dm:"<strong>糖尿病</strong>：高纤维，最重要的是吃饭时间、饭量和打胰岛素的时间固定（二手资料）。",
+  allergy:"<strong>食物过敏</strong>：要用狗没吃过的蛋白或水解蛋白做排除试验，食材由兽医定。",
+  stone:"<strong>尿结石</strong>：先查清是哪种结石，鸟粪石和草酸钙的饮食方向相反，搞错会更严重。",
+  heart:"<strong>心脏病</strong>：一般和钠有关，这个演示版没有调研，请问兽医。",
+  liver:"<strong>肝病</strong>：一般和铜、蛋白有关，这个演示版没有调研，请问兽医。",
+  preg:"<strong>怀孕 / 哺乳</strong>：热量要另算（怀孕后期和哺乳期会大幅增加），要用“生长与繁殖”的标准。演示版不算，请问兽医。",
+};
+
+const fmt = (v, u) => {
+  if (v == null) return "—";
+  const d = v >= 100 ? 0 : v >= 10 ? 1 : 2;
+  return v.toLocaleString("zh-CN", {maximumFractionDigits:d, minimumFractionDigits:0}) + " " + u;
+};
+
+function read(){
+  const y = +ay.value, m = +am.value;
+  return {
+    w: Math.max(+$("w").value || 0, 0.5),
+    ageMonths: y * 12 + m,
+    mature: +$("mw").value || 0,
+    neutered: document.querySelector("input[name=neuter]:checked").value === "1",
+    act: document.querySelector("input[name=act]:checked").value,
+    bcs: $("bcs").value,
+    kd: +$("kd").value || 0,
+    dz: [...document.querySelectorAll("#dz input:checked")].map(i => i.value),
+  };
+}
+
+function render(){
+  const p = read();
+  $("puppyBox").hidden = p.ageMonths >= 12;
+  const r = calc(p);
+  const E = $("energy"), B = $("banners");
+  B.innerHTML = "";
+  if (r.tooYoung){
+    E.innerHTML = "";
+    B.innerHTML = '<div class="banner warn"><strong>不满 2 个月</strong>：还在吃奶或刚断奶，热量和喂法请直接问兽医。</div>';
+    $("keyT").innerHTML = ""; $("allT").innerHTML = ""; $("colTag").textContent = "";
+    return;
+  }
+  let html = `<div class="stat main"><div class="k">每天要的热量</div><div class="v">${Math.round(r.kcal)} <small>kcal</small></div><div class="s">${r.method}</div></div>`;
+  html += `<div class="stat"><div class="k">静息热量 RER</div><div class="v">${Math.round(r.rer)} <small>kcal</small></div><div class="s">70 × 体重<sup>0.75</sup></div></div>`;
+  if (r.range) html += `<div class="stat"><div class="k">欧洲标准参考范围（${r.range.label}）</div><div class="v">${Math.round(r.range.lo)}–${Math.round(r.range.hi)} <small>kcal</small></div><div class="s">FEDIAF 按年龄的范围，用来对照</div></div>`;
+  if (r.grams) html += `<div class="stat"><div class="k">每天喂多少</div><div class="v">${Math.round(r.grams)} <small>g</small></div><div class="s">按你填的 ${p.kd} kcal / 100 g</div></div>`;
+  E.innerHTML = html;
+
+  const notes = [];
+  notes.push("公式只是<strong>起点</strong>，每只狗可能相差 ±50%。按这个量喂 2 周，称体重、摸肋骨，胖了减、瘦了加。");
+  if (p.bcs === "over" || p.bcs === "obese") notes.push("选了偏胖 / 肥胖：热量按 1.0 × RER 算（按现在体重）。<strong>减到多少、减多快，请让兽医按理想体重定</strong>。");
+  if (p.bcs === "thin") notes.push("选了偏瘦：先排除生病，再慢慢加量。");
+  if (r.stage === "early" || r.stage === "late") notes.push("幼犬<strong>不能敞开吃</strong>，吃太多会长得太快，伤骨头。每周称一次体重。");
+  if (r.large) notes.push("大型犬幼犬（成年超过 15 kg）：<strong>钙太多和太少一样伤骨头</strong>，钙磷比最高 1.6:1（约 6 月龄前）。吃完整狗粮时不要另外加钙。");
+  if (r.senior) notes.push("老年狗吃得少，但每天要的营养几乎没少，所以按“营养更浓”的标准算。还要留意肌肉有没有变少。");
+  let bh = `<div class="banner note"><strong>注意</strong><ul>${notes.map(n => `<li>${n}</li>`).join("")}</ul></div>`;
+  if (p.dz.length){
+    bh = `<div class="banner warn"><strong>有基础疾病：下面的目标是健康狗的标准，不能直接用。</strong>饮食要由兽医（最好是兽医营养专科医师）来定。<ul>${p.dz.map(d => `<li>${DZ[d]}</li>`).join("")}</ul></div>` + bh;
+  }
+  B.innerHTML = bh;
+
+  const t = targets(r);
+  const colName = {a95:"成年 · 营养更浓的那一列（吃得少的狗）", a110:"成年 · 标准列", early:"幼犬 · 14 周以前", late:"幼犬 · 14 周以后"}[r.stage];
+  $("colTag").textContent = "FEDIAF 2024 · " + colName;
+  const head = `<thead><tr><th>营养</th><th>每天至少</th><th>每天最多</th><th>标准（每 1000 kcal）</th></tr></thead>`;
+  const row = x => `<tr class="${x.key ? "key" : ""}"><td>${x.name}</td><td class="n">${fmt(x.day, x.unit)}</td><td class="n">${fmt(x.maxDay, x.unit)}</td><td class="n">${fmt(x.per1000, x.unit)}</td></tr>`;
+  const ratioRow = `<tr class="key"><td>钙磷比</td><td class="n" colspan="2">${r.caP || "1:1 ～ 2:1"}</td><td class="n">钙 ÷ 磷</td></tr>`;
+  const key = t.filter(x => x.key && x.per1000 != null);
+  const caIdx = key.findIndex(x => x.name === "磷");
+  const keyRows = key.map(row);
+  keyRows.splice(caIdx + 1, 0, ratioRow);
+  $("keyT").innerHTML = head + "<tbody>" + keyRows.join("") + "</tbody>";
+  $("allT").innerHTML = head + "<tbody>" + t.map(row).join("") + "</tbody>";
+  $("keyBox").classList.toggle("dim", p.dz.length > 0);
+}
+
+document.getElementById("f").addEventListener("input", render);
+document.getElementById("f").addEventListener("submit", e => e.preventDefault());
+render();
+</script>
