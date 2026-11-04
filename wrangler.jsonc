@@ -2,5 +2,7 @@
   // 只发布静态网页（dist/），没有服务端代码。构建：node scripts/build-site.mjs
   "name": "dog-nutrition",
   "compatibility_date": "2025-09-01",
-  "assets": { "directory": "./dist" }
+  "assets": { "directory": "./dist" },
+  "workers_dev": true,
+  "preview_urls": false
 }
