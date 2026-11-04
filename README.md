@@ -9,4 +9,4 @@
 - [补充包配方（草案 v0.1）](research/04-补充包配方.md)
 
 ## 公开网站（给朋友用）
-构建：`node scripts/build-site.mjs` → `dist/index.html`。Cloudflare Pages 设置：构建命令 `node scripts/build-site.mjs`，输出目录 `dist`，生产分支 `claude/pet-dog-nutrition-research-an0ird`。
+构建：`node scripts/build-site.mjs` → `dist/index.html`。发布在 Cloudflare Workers（静态资源，配置见 `wrangler.jsonc`）：构建命令 `node scripts/build-site.mjs`，部署命令 `npx wrangler deploy`，分支 `claude/pet-dog-nutrition-research-an0ird`。
