@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>狗狗营养计算器</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -29,6 +30,12 @@ form{display:flex;flex-direction:column;gap:14px}
 .field{display:flex;flex-direction:column;gap:5px}
 .field>label,.legend{font-size:13px;font-weight:600;letter-spacing:.02em}
 .hint{font-size:12px;color:var(--muted)}
+.sep{border-top:1px solid var(--line);margin:4px 0}
+.legend.big{font-size:15px}
+td.ok{color:var(--accent)} td.bad{color:var(--warn)}
+tr.total td{font-weight:600;background:var(--bg)}
+#recT,#gapT{min-width:0}
+@media (max-width:480px){#recT th,#recT td,#gapT th,#gapT td{padding:7px 8px;font-size:13px}}
 .row{display:flex;gap:10px;flex-wrap:wrap}
 .row>*{flex:1 1 120px;min-width:0}
 input[type=number],select{font:inherit;font-family:var(--f-num);width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
@@ -75,7 +82,7 @@ details .tablebox{border:0;border-top:1px solid var(--line);border-radius:0 0 8p
 <div class="wrap">
   <header>
     <h1>狗狗营养计算器</h1>
-    <p>输入狗的情况，算出它<strong>每天要多少热量</strong>，以及每天<strong>每种营养至少要多少、最多不能超过多少</strong>。标准用欧洲宠物食品联合会 FEDIAF 2024 和美国宠物营养联盟（PNA）的公开公式。演示版，不能代替兽医。</p>
+    <p>输入狗的情况，算出它<strong>每天要多少热量</strong>、每天<strong>每种营养至少要多少、最多不能超过多少</strong>，再选几样食材，<strong>自动算出每样放几克、要加多少补充剂</strong>。标准用欧洲宠物食品联合会 FEDIAF 2024 和美国宠物营养联盟（PNA）的公开公式。演示版，不能代替兽医。</p>
   </header>
 
   <div class="grid">
@@ -139,6 +146,18 @@ details .tablebox{border:0;border-top:1px solid var(--line);border-radius:0 0 8p
           <input id="kd" type="number" min="20" max="600" step="1" placeholder="例如成品鲜食包装上写的 130">
           <span class="hint">填了就能算出每天喂多少克。成品鲜食、狗粮包装上一般都有。</span>
         </div>
+        <div class="sep" role="separator"></div>
+        <span class="legend big">用食材配一份（自动算克数）</span>
+        <div class="field"><label for="s_meat">肉</label><select id="s_meat"></select></div>
+        <div class="field"><label for="s_carb">主食</label><select id="s_carb"></select></div>
+        <div class="field"><span class="legend">蔬菜（最多两种）</span>
+          <div class="row"><select id="s_veg1" aria-label="蔬菜 1"></select><select id="s_veg2" aria-label="蔬菜 2"></select></div></div>
+        <div class="field"><label for="s_organ">内脏（少量，补维生素和微量元素）</label><select id="s_organ"></select></div>
+        <div class="field"><label for="s_oil">油</label><select id="s_oil"></select></div>
+        <fieldset><div class="seg">
+          <label><input type="checkbox" id="s_egg">加鸡蛋</label>
+          <label><input type="checkbox" id="s_fish">加鱼油（幼犬自动加）</label>
+        </div></fieldset>
       </form>
     </section>
 
@@ -153,10 +172,21 @@ details .tablebox{border:0;border-top:1px solid var(--line);border-radius:0 0 8p
         <summary>全部 40 多项营养（氨基酸、维生素、微量元素）</summary>
         <div class="tablebox"><table id="allT"></table></div>
       </details>
+      <div id="recipeBox" class="results">
+        <h2>配方：每天各放多少克</h2>
+        <div id="recipeNote"></div>
+        <div class="tablebox"><table id="recT"></table></div>
+        <h2>还要靠复合维生素矿物质补的</h2>
+        <div class="tablebox"><table id="gapT"></table></div>
+        <details>
+          <summary>这份配方的全部营养对照</summary>
+          <div class="tablebox"><table id="chkT"></table></div>
+        </details>
+      </div>
       <div class="foot">
         <span><strong>怎么算的：</strong>①静息热量 RER = 70 × 体重<sup>0.75</sup>；成年犬每天热量 = RER × 系数（已绝育 1.6、未绝育 1.8、活动少 1.4、减重 1.0，来自 PNA）。②幼犬用 FEDIAF 公式 (254.1 − 135 × 现体重 / 成年体重) × 现体重<sup>0.75</sup>。③每天的营养目标 = 每天热量 × FEDIAF 2024 表 III-3b 每 1000 kcal 的标准。</span>
-        <span><strong>还没做的：</strong>按食材自动配克数（要先核对中国食材成分数据）。所以这里只给“目标”，不给配方。</span>
-        <span>出处：<a href="https://europeanpetfood.org/wp-content/uploads/2024/09/FEDIAF-Nutritional-Guidelines_2024.pdf" target="_blank" rel="noopener">FEDIAF Nutritional Guidelines 2024</a> · <a href="https://petnutritionalliance.org/wp-content/uploads/2023/03/MER.RER_.PNA_.pdf" target="_blank" rel="noopener">PNA 热量系数表</a> · <a href="https://dvm360.com/view/renal-diets-veterinary-patients-what-feed-and-when-start" target="_blank" rel="noopener">Heinze：肾病饮食</a></span>
+        <span><strong>配方怎么算的：</strong>蛋白质按热量的 30%（幼犬 35%）、且不低于最低值的 1.2 倍来定肉的克数；内脏占 5% 热量、鸡蛋 10%、蔬菜按每 kcal 0.1 g；油补足亚油酸和脂肪；剩下的热量给主食。再用磷酸氢钙补磷、碳酸钙补钙（钙磷比按上表）、食盐补钠。食材营养来自美国农业部 FoodData Central（SR Legacy，公共领域数据），数据库里没有的按 0 算；碘、氯和氨基酸没有核对。<strong>这些比例是演示用的假设，不是兽医配方。</strong></span>
+        <span>出处：<a href="https://europeanpetfood.org/wp-content/uploads/2024/09/FEDIAF-Nutritional-Guidelines_2024.pdf" target="_blank" rel="noopener">FEDIAF Nutritional Guidelines 2024</a> · <a href="https://petnutritionalliance.org/wp-content/uploads/2023/03/MER.RER_.PNA_.pdf" target="_blank" rel="noopener">PNA 热量系数表</a> · <a href="https://dvm360.com/view/renal-diets-veterinary-patients-what-feed-and-when-start" target="_blank" rel="noopener">Heinze：肾病饮食</a> · <a href="https://fdc.nal.usda.gov/" target="_blank" rel="noopener">USDA FoodData Central</a></span>
       </div>
     </section>
   </div>
@@ -222,9 +252,10 @@ function calc(p){
     out.kcal = (254.1 - 135.0 * ratio) * mbw;
     out.method = "幼犬：FEDIAF 生长公式";
     out.range = null;
-    if (p.mature > 15 && months < 6) { out.caLate = 2.5; out.caP = "1:1 ～ 1.6:1"; }
-    else { out.caLate = 2.0; out.caP = out.stage === "early" ? "1:1 ～ 1.6:1" : "1:1 ～ 1.8:1"; }
-    if (out.stage === "early") out.caP = "1:1 ～ 1.6:1";
+    if (p.mature > 15 && months < 6) { out.caLate = 2.5; out.caPMax = 1.6; }
+    else { out.caLate = 2.0; out.caPMax = 1.8; }
+    if (out.stage === "early") out.caPMax = 1.6;
+    out.caP = "1:1 ～ " + out.caPMax + ":1";
     out.large = p.mature > 15;
   } else {
     let f = p.neutered ? 1.6 : 1.8, why = p.neutered ? "已绝育 1.6" : "未绝育 1.8";
@@ -255,6 +286,121 @@ function targets(r){
             maxDay: max == null ? null : max * r.kcal / 1000, key: !!n[6]};
   });
 }
+const FK=["kcal", "protein", "fat", "ca", "p", "k", "na", "mg", "fe", "zn", "cu", "mn", "se", "va", "vd", "ve", "b1", "b2", "b3", "b5", "b6", "b12", "fol", "cho", "la", "ala", "epa", "dha", "ara", "i"];
+const FOODS_RAW=[
+[171477,"鸡胸肉（熟）","meat",165,31.02,3.57,15,228,256,74,29,1.04,1,0.049,0.017,27.6,21,5,0.27,0.07,0.114,13.712,0.965,0.6,0.34,4,85.3,0.59,0.03,0.01,0.02,0.06,0],
+[172388,"鸡腿肉（去皮，熟）","meat",179,24.76,8.15,9,230,269,106,24,1.13,1.92,0.067,0.016,27.1,27,7,0.18,0.096,0.218,6.208,1.3,0.462,0.42,5,71.8,1.46,0.061,0.005,0.005,0.087,0],
+[171794,"牛肉末（90%瘦，熟）","meat",230,28.45,12.04,16,250,433,87,27,3.08,6.84,0.099,0.013,21.6,9,2,0.12,0.043,0.191,6.804,0.807,0.428,2.8,8,91.4,0.323,0.009,0,0,0.046,0],
+[168250,"猪里脊（熟）","meat",143,26.17,3.51,6,267,421,57,29,1.15,2.42,0.111,0.013,38.2,0,10,0.08,0.95,0.387,7.432,1.012,0.739,0.57,0,88.9,0.423,0.013,0,0,0.057,0],
+[175168,"三文鱼（熟）","meat",206,22.1,12.35,15,252,384,61,30,0.34,0.43,0.049,0.016,41.4,230,526,1.14,0.34,0.135,8.045,1.475,0.647,2.8,34,90.5,0.666,0.113,0.69,1.457,1.273,0],
+[171956,"鳕鱼（熟）","meat",105,22.83,0.86,14,138,244,78,42,0.49,0.58,0.036,0.02,37.6,47,46,0.81,0.088,0.079,2.513,0.18,0.283,1.05,8,83.7,0.006,0.001,0.004,0.154,0.028,0],
+[172544,"羊肉末（熟）","meat",283,24.75,19.65,22,201,339,81,24,1.79,4.67,0.128,0.024,27.7,0,2,0.14,0.1,0.25,6.7,0.66,0.14,2.61,19,93.4,1.07,0.26,0,0,0.07,0],
+[173424,"鸡蛋（煮熟）","egg",155,12.58,10.61,50,172,126,124,10,1.19,1.05,0.013,0.026,30.8,520,87,1.03,0.066,0.513,0.064,1.398,0.121,1.11,44,293.8,1.188,0.035,0.005,0.038,0.149,0],
+[171061,"鸡肝（煮熟）","organ",167,24.46,6.51,11,405,263,76,25,11.63,3.98,0.496,0.359,82.4,13328,0,0.82,0.291,1.993,11.045,6.668,0.755,16.85,578,290,0.719,0.012,0,0,0.508,0],
+[168626,"牛肝（熟）","organ",191,29.08,5.26,6,497,352,79,21,6.54,5.3,14.283,0.356,36.1,31714,49,0.51,0.194,3.425,17.525,7.11,1.017,70.58,253,426,0,0.017,0,0,0.397,0],
+[168878,"白米饭","carb",130,2.69,0.28,10,43,35,1,12,1.2,0.49,0.069,0.472,7.5,0,0,0.04,0.163,0.013,1.476,0.39,0.093,0,58,2.1,0.062,0.013,0,0,0,0],
+[169704,"糙米饭","carb",123,2.74,0.97,3,103,86,4,39,0.56,0.71,0.106,0.974,5.8,0,0,0.17,0.178,0.069,2.561,0.38,0.123,0,9,9.2,0.355,0.011,0,0,0,0],
+[168484,"红薯（煮熟）","carb",76,1.37,0.14,27,32,230,27,18,0.72,0.2,0.094,0.266,0.2,15740,0,0.94,0.056,0.047,0.538,0.581,0.165,0,6,10.8,0.061,0,0,0,0,0],
+[170440,"土豆（煮熟）","carb",86,1.71,0.1,8,40,328,5,20,0.31,0.27,0.167,0.14,0.3,2,0,0.01,0.098,0.019,1.312,0.509,0.269,0,9,13.2,0.032,0.01,0,0,0,0],
+[173904,"燕麦片（生重）","carb",379,13.15,6.52,52,410,362,6,138,4.25,3.64,0.391,3.63,28.9,0,0,0.42,0.46,0.155,1.125,1.12,0.1,0,32,40.4,2.2,0.1,0,0,0,0],
+[170072,"山药（熟）","carb",116,1.49,0.14,14,49,670,8,18,0.52,0.2,0.152,0.371,0.7,122,0,0.34,0.095,0.028,0.552,0.311,0.228,0,16,16.2,0.05,0.009,0,0,0,0],
+[168449,"南瓜（煮熟）","veg",20,0.72,0.07,15,30,230,1,9,0.57,0.23,0.091,0.089,0.2,5755,0,0.8,0.031,0.078,0.413,0.201,0.044,0,9,6.2,0.002,0.002,0,0,0,0],
+[170394,"胡萝卜（煮熟）","veg",35,0.76,0.18,30,30,235,58,10,0.34,0.2,0.017,0.155,0.7,17033,0,1.03,0.066,0.044,0.645,0.232,0.153,0,14,8.8,0.087,0.001,0,0,0,0],
+[169967,"西兰花（煮熟）","veg",35,2.38,0.41,40,67,293,41,21,0.67,0.45,0.061,0.194,1.6,1548,0,1.45,0.063,0.123,0.553,0.616,0.2,0,108,40.1,0.051,0.119,0,0,0,0],
+[168463,"菠菜（煮熟）","veg",23,2.97,0.26,136,56,466,70,87,3.57,0.76,0.174,0.935,1.5,10481,0,2.08,0.095,0.236,0.49,0.145,0.242,0,146,19.7,0.017,0.092,0,0,0,0],
+[169976,"卷心菜（煮熟）","veg",23,1.27,0.06,48,33,196,8,15,0.17,0.2,0.017,0.205,0.6,80,0,0.14,0.061,0.038,0.248,0.174,0.112,0,30,20.3,0.009,0.014,0,0,0,0],
+[170420,"青豆（煮熟）","veg",84,5.36,0.22,27,117,271,3,39,1.54,1.19,0.173,0.525,1.9,801,0,0.14,0.259,0.149,2.021,0.153,0.216,0,63,29.7,0.082,0.019,0,0,0,0],
+[171411,"大豆油","oil",884,0,100,0,0,0,0,0,0.05,0.01,0,0,0,0,0,8.18,0,0,0,0,0,0,0,0.2,50.952,6.789,0,0,0,0],
+[171025,"葵花籽油","oil",884,0,100,0,0,0,0,0,0,0,0,0,0,0,0,41.08,0,0,0,0,0,0,0,0.2,65.7,0,0,0,0,0],
+[171413,"橄榄油","oil",884,0,100,1,0,1,2,0,0.56,0,0,0,0,0,0,14.35,0,0,0,0,0,0,0,0.3,9.762,0.761,0,0,0,0],
+[172343,"鱼油（三文鱼油）","fish",902,0,100,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1.543,1.061,13.023,18.232,0.675,0]];
+
+// 美国农业部 FoodData Central（SR Legacy 2018）每 100 g 的营养；数据库里没有记录的按 0 算（保守）
+const FOODS = FOODS_RAW.map(r => { const o = {id:r[0], n:r[1], c:r[2]}; FK.forEach((k,i) => o[k] = r[3+i]); return o; });
+const F = id => FOODS.find(x => x.id === +id);
+// FEDIAF 营养名 → 食材数据里的字段
+const CODE = {"蛋白质":"protein","脂肪":"fat","亚油酸（ω-6）":"la","花生四烯酸（ω-6）":"ara","α-亚麻酸（ω-3）":"ala","EPA + DHA（ω-3）":"epadha",
+  "钙":"ca","磷":"p","钾":"k","钠":"na","镁":"mg","铜":"cu","碘":"i","铁":"fe","锰":"mn","硒（湿粮）":"se","锌":"zn",
+  "维生素 A":"va","维生素 D":"vd","维生素 E":"ve","维生素 B1":"b1","维生素 B2":"b2","泛酸（B5）":"b5","维生素 B6":"b6",
+  "维生素 B12":"b12","烟酸（B3）":"b3","叶酸":"fol","胆碱":"cho"};
+// 食材数据的单位 → FEDIAF 的单位：矿物质 mg→g 的要换算
+const CONV = {ca:1/1000, p:1/1000, k:1/1000, na:1/1000, mg:1/1000, ve:1.49, ara:1000};
+const NODATA = {"碘":1, "氯":1};
+
+function sumNut(items){
+  const t = {};
+  FK.forEach(k => t[k] = 0);
+  items.forEach(it => FK.forEach(k => t[k] += (it.f[k] || 0) * it.g / 100));
+  t.epadha = t.epa + t.dha;
+  return t;
+}
+
+function formulate(r, tg, sel){
+  const K = r.kcal, puppy = r.stage === "early" || r.stage === "late";
+  const T = {}; tg.forEach(x => { if (CODE[x.name]) T[CODE[x.name]] = x; });
+  const meat = F(sel.meat), carb = F(sel.carb), oil = F(sel.oil);
+  const fixed = [];
+  if (sel.organ) { const o = F(sel.organ); fixed.push({f:o, g:0.05 * K / o.kcal * 100, role:"内脏"}); }
+  if (sel.egg)   { const e = F(173424); fixed.push({f:e, g:0.10 * K / e.kcal * 100, role:"蛋"}); }
+  const vegs = sel.veg.filter(Boolean).map(F);
+  vegs.forEach(v => fixed.push({f:v, g:0.10 * K / vegs.length, role:"蔬菜"}));   // 蔬菜按每 kcal 0.1 g 放
+  const wantFish = puppy || sel.fish;
+  if (wantFish) { const fo = F(172343); fixed.push({f:fo, g:0.20 * K / 1000 / ((fo.epa + fo.dha) / 100), role:"鱼油"}); }
+  const share = puppy ? 0.35 : 0.30;                 // 蛋白质占热量的目标比例（推断）
+  const protT = Math.max(T.protein.day * 1.2, share * K / 4);
+  let meatG = 0, carbG = 0, oilG = 0;
+  for (let i = 0; i < 6; i++){
+    const others = sumNut(fixed.concat([{f:carb, g:carbG}]));
+    meatG = Math.max(0, (protT - others.protein) / meat.protein * 100);
+    let used = sumNut(fixed.concat([{f:meat, g:meatG}, {f:oil, g:oilG}])).kcal;
+    if (K - used < 0.10 * K) {                      // 肉太肥时，至少给主食留 10% 热量
+      meatG = Math.max(0, meatG - (0.10 * K - (K - used)) / meat.kcal * 100);
+      used = sumNut(fixed.concat([{f:meat, g:meatG}, {f:oil, g:oilG}])).kcal;
+    }
+    carbG = Math.max(0, (K - used) / carb.kcal * 100);
+    const tot = sumNut(fixed.concat([{f:meat, g:meatG}, {f:carb, g:carbG}, {f:oil, g:oilG}]));
+    const laNeed = T.la.day * 1.2 - tot.la, fatNeed = T.fat.day * 1.1 - tot.fat;
+    const add = Math.max(laNeed > 0 ? laNeed / oil.la * 100 : 0, fatNeed > 0 ? fatNeed : 0);
+    if (add > 0.05) oilG += add; else if (i > 1) break;
+  }
+  const items = [{f:meat, g:meatG, role:"肉"}].concat(fixed.filter(x => x.role !== "鱼油" && x.role !== "蔬菜"),
+    [{f:carb, g:carbG, role:"主食"}], fixed.filter(x => x.role === "蔬菜"), oilG > 0.05 ? [{f:oil, g:oilG, role:"油"}] : [],
+    fixed.filter(x => x.role === "鱼油"));
+  const tot = sumNut(items);
+  // 补充剂（化学式算出的含量）：磷酸氢钙 CaHPO4·2H2O 含钙 23.3%、磷 18.0%；碳酸钙含钙 40.0%；食盐含钠 39.3%
+  const pNow = tot.p / 1000;
+  const pT = T.p.day * 1.1;
+  const dcp = pNow < pT ? (pT - pNow) / 0.180 : 0;
+  const pFinal = pNow + dcp * 0.180;
+  const caNow = tot.ca / 1000 + dcp * 0.233;
+  const ratioMax = r.caPMax || 2.0;
+  let caT = Math.max(T.ca.day * 1.15, pFinal * 1.2);
+  caT = Math.min(caT, T.ca.maxDay ? T.ca.maxDay * 0.9 : Infinity, pFinal * ratioMax * 0.95);
+  const caco3 = caT > caNow ? (caT - caNow) / 0.400 : 0;
+  const caFinal = caNow + caco3 * 0.400;
+  const naNow = tot.na / 1000, naT = T.na.day * 1.1;
+  const salt = naNow < naT ? (naT - naNow) / 0.393 : 0;
+  const naFinal = naNow + salt * 0.393;
+  // 维生素 A 的上限只按动物性食材算（植物里的是胡萝卜素，狗按需转化，推断）
+  const vaAnimal = items.filter(x => ["meat","egg","organ","fish"].includes(x.f.c)).reduce((a, x) => a + x.f.va * x.g / 100, 0);
+  const check = tg.map(x => {
+    const code = CODE[x.name];
+    if (NODATA[x.name]) return {...x, have:null, st:"nodata"};
+    if (!code) return {...x, have:null, st:"skip"};
+    let have = code === "ca" ? caFinal : code === "p" ? pFinal : code === "na" ? naFinal : tot[code] * (CONV[code] || 1);
+    let st = "ok";
+    if (x.day != null && have < x.day * 0.995) st = "low";
+    const forMax = code === "va" ? vaAnimal : have;
+    if (x.maxDay != null && forMax > x.maxDay) st = "high";
+    return {...x, have, st, pct: x.day ? have / x.day : null, gap: x.day != null && have < x.day ? x.day - have : 0};
+  });
+  const supp = [];
+  if (dcp > 0.01) supp.push({n:"磷酸氢钙（补钙和磷）", g:dcp});
+  if (caco3 > 0.01) supp.push({n:"碳酸钙（补钙）", g:caco3});
+  if (salt > 0.01) supp.push({n:"食盐（补钠）", g:salt});
+  return {items, tot, supp, ratio: pFinal > 0 ? caFinal / pFinal : null, ratioMax, check, kcal: tot.kcal,
+          protPct: tot.protein * 4 / tot.kcal, fatPct: tot.fat * 9 / tot.kcal, wantFish};
+}
 </script>
 
 <script>
@@ -263,6 +409,19 @@ const ay = $("ay"), am = $("am");
 for (let i = 0; i <= 20; i++) ay.add(new Option(i + " 岁", i));
 for (let i = 0; i <= 11; i++) am.add(new Option(i + " 个月", i));
 ay.value = "4"; am.value = "0";
+const fillSel = (id, cats, none, def) => {
+  const el = $(id);
+  if (none) el.add(new Option(none, ""));
+  FOODS.filter(f => cats.includes(f.c)).forEach(f => el.add(new Option(f.n, f.id)));
+  if (def != null) el.value = String(def);
+};
+fillSel("s_meat", ["meat"], null, 171477);
+fillSel("s_carb", ["carb"], null, 168878);
+fillSel("s_veg1", ["veg"], "不加", 170394);
+fillSel("s_veg2", ["veg"], "不加", 169967);
+fillSel("s_organ", ["organ"], "不加", "");
+fillSel("s_oil", ["oil"], null, 171025);
+
 
 const DZ = {
   ckd:"<strong>肾病</strong>：最关键的是<strong>限磷</strong>。早期可以先选磷低于 1.5 g / 1000 kcal 的饮食；3 期或有蛋白尿，大多数只应吃处方肾病粮。下面表里的磷目标是健康狗的，不适用。",
@@ -305,6 +464,7 @@ function render(){
     E.innerHTML = "";
     B.innerHTML = '<div class="banner warn"><strong>不满 2 个月</strong>：还在吃奶或刚断奶，热量和喂法请直接问兽医。</div>';
     $("keyT").innerHTML = ""; $("allT").innerHTML = ""; $("colTag").textContent = "";
+    $("recipeNote").innerHTML = ""; $("recT").innerHTML = ""; $("gapT").innerHTML = ""; $("chkT").innerHTML = "";
     return;
   }
   let html = `<div class="stat main"><div class="k">每天要的热量</div><div class="v">${Math.round(r.kcal)} <small>kcal</small></div><div class="s">${r.method}</div></div>`;
@@ -339,6 +499,44 @@ function render(){
   $("keyT").innerHTML = head + "<tbody>" + keyRows.join("") + "</tbody>";
   $("allT").innerHTML = head + "<tbody>" + t.map(row).join("") + "</tbody>";
   $("keyBox").classList.toggle("dim", p.dz.length > 0);
+  renderRecipe(p, r, t);
+}
+
+function renderRecipe(p, r, t){
+  const box = $("recipeBox");
+  if (p.dz.length){
+    $("recipeNote").innerHTML = '<div class="banner warn"><strong>有基础疾病时不自动出配方。</strong>请让兽医或兽医营养专科医师定。</div>';
+    $("recT").innerHTML = ""; $("gapT").innerHTML = ""; $("chkT").innerHTML = "";
+    return;
+  }
+  const sel = {meat:$("s_meat").value, carb:$("s_carb").value, veg:[$("s_veg1").value, $("s_veg2").value],
+    organ:$("s_organ").value || null, oil:$("s_oil").value, egg:$("s_egg").checked, fish:$("s_fish").checked};
+  const m = formulate(r, t, sel);
+  const meals = (r.stage === "early" || r.stage === "late") ? "分 3～4 顿" : "分 2 顿";
+  let note = `<div class="banner note"><strong>每天合计约 ${Math.round(m.kcal)} kcal</strong>，蛋白质占 ${Math.round(m.protPct*100)}%、脂肪占 ${Math.round(m.fatPct*100)}%，钙磷比 ${m.ratio ? m.ratio.toFixed(2) : "—"}:1。${meals}。<ul>`;
+  note += "<li>克数都是<strong>做熟以后</strong>的重量（燕麦片是生重）。</li>";
+  if (m.fatPct > 0.5) note += "<li>这种肉偏肥，脂肪超过一半热量。胖狗或胰腺炎风险高的狗换瘦一点的肉。</li>";
+  note += "<li>补充剂用食品级的，按克数用厨房秤（0.1 g 精度）称，和饭拌匀。</li></ul></div>";
+  $("recipeNote").innerHTML = note;
+  const g1 = x => x >= 10 ? Math.round(x) : x.toFixed(1);
+  let rows = m.items.map(it => `<tr><td>${it.role}</td><td>${it.f.n}</td><td class="n">${g1(it.g)} g</td><td class="n">${Math.round(it.f.kcal*it.g/100)} kcal</td></tr>`);
+  rows = rows.concat(m.supp.map(x => `<tr><td>补充剂</td><td>${x.n}</td><td class="n">${x.g.toFixed(2)} g</td><td class="n">0 kcal</td></tr>`));
+  const totalG = m.items.reduce((a, x) => a + x.g, 0) + m.supp.reduce((a, x) => a + x.g, 0);
+  rows.push(`<tr class="total"><td>合计</td><td></td><td class="n">${Math.round(totalG)} g</td><td class="n">${Math.round(m.kcal)} kcal</td></tr>`);
+  $("recT").innerHTML = "<thead><tr><th>类别</th><th>食材</th><th>每天</th><th>热量</th></tr></thead><tbody>" + rows.join("") + "</tbody>";
+  const low = m.check.filter(x => x.st === "low");
+  const nod = m.check.filter(x => x.st === "nodata");
+  const high = m.check.filter(x => x.st === "high");
+  let gr = low.map(x => `<tr><td>${x.name}</td><td class="n">${fmt(x.have, x.unit)}</td><td class="n">${fmt(x.day, x.unit)}</td><td class="n bad">还差 ${fmt(x.gap, x.unit)}（${Math.round(x.pct*100)}%）</td></tr>`);
+  gr = gr.concat(high.map(x => `<tr><td>${x.name}</td><td class="n">${fmt(x.have, x.unit)}</td><td class="n">最多 ${fmt(x.maxDay, x.unit)}</td><td class="n bad">超过上限，减少这种食材</td></tr>`));
+  gr = gr.concat(nod.map(x => `<tr><td>${x.name}</td><td class="n">没有数据</td><td class="n">${fmt(x.day, x.unit)}</td><td class="n">靠补充剂</td></tr>`));
+  if (!low.length && !high.length) gr.unshift('<tr><td colspan="4" class="ok">食材 + 上面的补充剂已经把有数据的营养都补齐了。</td></tr>');
+  $("gapT").innerHTML = "<thead><tr><th>营养</th><th>配方提供</th><th>每天至少</th><th>情况</th></tr></thead><tbody>" + gr.join("") + "</tbody>";
+  const cr = m.check.filter(x => x.st !== "skip").map(x => {
+    const tag = x.st === "ok" ? '<td class="n ok">达标</td>' : x.st === "low" ? `<td class="n bad">${Math.round(x.pct*100)}%</td>` : x.st === "high" ? '<td class="n bad">超上限</td>' : '<td class="n">无数据</td>';
+    return `<tr><td>${x.name}</td><td class="n">${fmt(x.have, x.unit)}</td><td class="n">${fmt(x.day, x.unit)}</td><td class="n">${fmt(x.maxDay, x.unit)}</td>${tag}</tr>`;
+  });
+  $("chkT").innerHTML = "<thead><tr><th>营养</th><th>配方提供</th><th>每天至少</th><th>每天最多</th><th>情况</th></tr></thead><tbody>" + cr.join("") + "</tbody>";
 }
 
 document.getElementById("f").addEventListener("input", render);
