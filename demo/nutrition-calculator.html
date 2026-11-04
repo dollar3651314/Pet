@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>狗狗营养计算器</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -75,6 +76,15 @@ details>summary{cursor:pointer;padding:10px 14px;font-weight:600}
 details .tablebox{border:0;border-top:1px solid var(--line);border-radius:0 0 8px 8px}
 .foot{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
 .foot a{color:var(--accent)}
+.mbar{display:none}
+@media (max-width:820px){
+  .mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:5;gap:10px;align-items:center;justify-content:space-between;
+    background:var(--panel);border-top:1px solid var(--line);
+    padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+  .mbar .v{font-family:var(--f-num);font-weight:500}
+  .mbar button{font:inherit;font-weight:600;border:0;border-radius:6px;padding:8px 14px;background:var(--accent);color:var(--panel);cursor:pointer}
+  body{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))}
+}
 .tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:4px;border:1px solid var(--line);color:var(--muted);margin-left:4px;vertical-align:1px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -157,6 +167,7 @@ details .tablebox{border:0;border-top:1px solid var(--line);border-radius:0 0 8p
         <fieldset><div class="seg">
           <label><input type="checkbox" id="s_egg">加鸡蛋</label>
           <label><input type="checkbox" id="s_fish">加鱼油（幼犬自动加）</label>
+          <label><input type="checkbox" id="s_pack" checked>用补充包</label>
         </div></fieldset>
       </form>
     </section>
@@ -176,7 +187,7 @@ details .tablebox{border:0;border-top:1px solid var(--line);border-radius:0 0 8p
         <h2>配方：每天各放多少克</h2>
         <div id="recipeNote"></div>
         <div class="tablebox"><table id="recT"></table></div>
-        <h2>还要靠复合维生素矿物质补的</h2>
+        <h2 id="gapH">还要靠复合维生素矿物质补的</h2>
         <div class="tablebox"><table id="gapT"></table></div>
         <details>
           <summary>这份配方的全部营养对照</summary>
@@ -191,6 +202,8 @@ details .tablebox{border:0;border-top:1px solid var(--line);border-radius:0 0 8p
     </section>
   </div>
 </div>
+
+<div class="mbar" id="mbar"><span>每天 <span class="v" id="mbarK">—</span> kcal</span><button type="button" id="mbarB">看配方 ↓</button></div>
 
 <script id="calc">
 // FEDIAF 2024 表 III-3b：每 1000 kcal ME 的最低推荐量。列：成年(95)、成年(110)、早期生长(<14 周)、后期生长(≥14 周)
@@ -220,12 +233,12 @@ const N = [
   ["钠","g",0.29,0.25,0.55,0.55],
   ["氯","g",0.43,0.38,0.83,0.83],
   ["镁","g",0.20,0.18,0.10,0.10],
-  ["铜","mg",2.08,1.80,2.75,2.75,1],
-  ["碘","mg",0.30,0.26,0.38,0.38,1],
-  ["铁","mg",10.40,9.00,22.00,22.00],
-  ["锰","mg",1.67,1.44,1.40,1.40],
+  ["铜","mg",2.08,1.80,2.75,2.75,1,{adult:7.0,early:7.0,late:7.0}],
+  ["碘","mg",0.30,0.26,0.38,0.38,1,{adult:2.75,early:2.75,late:2.75}],
+  ["铁","mg",10.40,9.00,22.00,22.00,0,{adult:170,early:170,late:170}],
+  ["锰","mg",1.67,1.44,1.40,1.40,0,{adult:42.5,early:42.5,late:42.5}],
   ["硒（湿粮）","µg",67.50,57.50,100,100],
-  ["锌","mg",20.80,18.00,25.00,25.00,1],
+  ["锌","mg",20.80,18.00,25.00,25.00,1,{adult:56.75,early:56.75,late:56.75}],
   ["维生素 A","IU",1754,1515,1250,1250,0,{adult:100000,early:100000,late:100000}],
   ["维生素 D","IU",159,138,138,125,1,{adult:800,early:800,late:800}],
   ["维生素 E","IU",10.40,9.00,12.50,12.50,1],
@@ -326,6 +339,10 @@ const CODE = {"蛋白质":"protein","脂肪":"fat","亚油酸（ω-6）":"la","�
 // 食材数据的单位 → FEDIAF 的单位：矿物质 mg→g 的要换算
 const CONV = {ca:1/1000, p:1/1000, k:1/1000, na:1/1000, mg:1/1000, ve:1.49, ara:1000};
 const NODATA = {"碘":1, "氯":1};
+// 补充包（每 1000 kcal 一份）提供的量，单位和 FEDIAF 表一致。草案 v0.1，见 research/04-补充包配方.md
+const PACK = {zn:22, cu:2.0, fe:16, mn:1.0, se:15, i:0.40, vd:140, ve:10, b1:0.2, b2:1.2, b5:2.0, b12:8, fol:20, cho:220, mg:0.06, k:0.30, na:0.38, cl:0.85};
+const PACK_G = 2.5;   // 每份重量（g），含载体
+const CODE2 = {"氯":"cl"};
 
 function sumNut(items){
   const t = {};
@@ -378,19 +395,27 @@ function formulate(r, tg, sel){
   caT = Math.min(caT, T.ca.maxDay ? T.ca.maxDay * 0.9 : Infinity, pFinal * ratioMax * 0.95);
   const caco3 = caT > caNow ? (caT - caNow) / 0.400 : 0;
   const caFinal = caNow + caco3 * 0.400;
-  const naNow = tot.na / 1000, naT = T.na.day * 1.1;
+  const servings = sel.pack ? K / 1000 : 0;
+  const packAdd = code => sel.pack && PACK[code] ? PACK[code] * servings : 0;
+  const naNow = tot.na / 1000 + packAdd("na"), naT = T.na.day * 1.1;
   const salt = naNow < naT ? (naT - naNow) / 0.393 : 0;
   const naFinal = naNow + salt * 0.393;
   // 维生素 A 的上限只按动物性食材算（植物里的是胡萝卜素，狗按需转化，推断）
   const vaAnimal = items.filter(x => ["meat","egg","organ","fish"].includes(x.f.c)).reduce((a, x) => a + x.f.va * x.g / 100, 0);
   const check = tg.map(x => {
     const code = CODE[x.name];
-    if (NODATA[x.name]) return {...x, have:null, st:"nodata"};
+    if (NODATA[x.name]) {
+      const pc = packAdd(CODE[x.name] || CODE2[x.name]);
+      if (!pc) return {...x, have:null, st:"nodata"};
+      const st = x.day != null && pc < x.day * 0.995 ? "low" : (x.maxDay != null && pc > x.maxDay ? "high" : "ok");
+      return {...x, have:pc, st, pct: x.day ? pc / x.day : null, gap: x.day != null && pc < x.day ? x.day - pc : 0, packOnly:true};
+    }
     if (!code) return {...x, have:null, st:"skip"};
-    let have = code === "ca" ? caFinal : code === "p" ? pFinal : code === "na" ? naFinal : tot[code] * (CONV[code] || 1);
+    let have = code === "ca" ? caFinal : code === "p" ? pFinal : code === "na" ? naFinal : tot[code] * (CONV[code] || 1) + packAdd(code);
     let st = "ok";
     if (x.day != null && have < x.day * 0.995) st = "low";
     const forMax = code === "va" ? vaAnimal : have;
+    const fromPack = packAdd(code);
     if (x.maxDay != null && forMax > x.maxDay) st = "high";
     return {...x, have, st, pct: x.day ? have / x.day : null, gap: x.day != null && have < x.day ? x.day - have : 0};
   });
@@ -398,6 +423,7 @@ function formulate(r, tg, sel){
   if (dcp > 0.01) supp.push({n:"磷酸氢钙（补钙和磷）", g:dcp});
   if (caco3 > 0.01) supp.push({n:"碳酸钙（补钙）", g:caco3});
   if (salt > 0.01) supp.push({n:"食盐（补钠）", g:salt});
+  if (sel.pack) supp.unshift({n:`补充包（${servings.toFixed(2)} 份）`, g:PACK_G * servings, pack:true});
   return {items, tot, supp, ratio: pFinal > 0 ? caFinal / pFinal : null, ratioMax, check, kcal: tot.kcal,
           protPct: tot.protein * 4 / tot.kcal, fatPct: tot.fat * 9 / tot.kcal, wantFish};
 }
@@ -499,6 +525,7 @@ function render(){
   $("keyT").innerHTML = head + "<tbody>" + keyRows.join("") + "</tbody>";
   $("allT").innerHTML = head + "<tbody>" + t.map(row).join("") + "</tbody>";
   $("keyBox").classList.toggle("dim", p.dz.length > 0);
+  $("mbarK").textContent = Math.round(r.kcal);
   renderRecipe(p, r, t);
 }
 
@@ -510,12 +537,13 @@ function renderRecipe(p, r, t){
     return;
   }
   const sel = {meat:$("s_meat").value, carb:$("s_carb").value, veg:[$("s_veg1").value, $("s_veg2").value],
-    organ:$("s_organ").value || null, oil:$("s_oil").value, egg:$("s_egg").checked, fish:$("s_fish").checked};
+    organ:$("s_organ").value || null, oil:$("s_oil").value, egg:$("s_egg").checked, fish:$("s_fish").checked, pack:$("s_pack").checked};
   const m = formulate(r, t, sel);
   const meals = (r.stage === "early" || r.stage === "late") ? "分 3～4 顿" : "分 2 顿";
   let note = `<div class="banner note"><strong>每天合计约 ${Math.round(m.kcal)} kcal</strong>，蛋白质占 ${Math.round(m.protPct*100)}%、脂肪占 ${Math.round(m.fatPct*100)}%，钙磷比 ${m.ratio ? m.ratio.toFixed(2) : "—"}:1。${meals}。<ul>`;
   note += "<li>克数都是<strong>做熟以后</strong>的重量（燕麦片是生重）。</li>";
   if (m.fatPct > 0.5) note += "<li>这种肉偏肥，脂肪超过一半热量。胖狗或胰腺炎风险高的狗换瘦一点的肉。</li>";
+  if (sel.pack) note += `<li>补充包按热量用：每 1000 kcal 一份（${PACK_G} g），这只狗每天 ${(m.kcal/1000).toFixed(2)} 份。钙和磷每份配方差别大，所以没放进补充包，单独加。</li>`;
   note += "<li>补充剂用食品级的，按克数用厨房秤（0.1 g 精度）称，和饭拌匀。</li></ul></div>";
   $("recipeNote").innerHTML = note;
   const g1 = x => x >= 10 ? Math.round(x) : x.toFixed(1);
@@ -527,19 +555,26 @@ function renderRecipe(p, r, t){
   const low = m.check.filter(x => x.st === "low");
   const nod = m.check.filter(x => x.st === "nodata");
   const high = m.check.filter(x => x.st === "high");
-  let gr = low.map(x => `<tr><td>${x.name}</td><td class="n">${fmt(x.have, x.unit)}</td><td class="n">${fmt(x.day, x.unit)}</td><td class="n bad">还差 ${fmt(x.gap, x.unit)}（${Math.round(x.pct*100)}%）</td></tr>`);
-  gr = gr.concat(high.map(x => `<tr><td>${x.name}</td><td class="n">${fmt(x.have, x.unit)}</td><td class="n">最多 ${fmt(x.maxDay, x.unit)}</td><td class="n bad">超过上限，减少这种食材</td></tr>`));
-  gr = gr.concat(nod.map(x => `<tr><td>${x.name}</td><td class="n">没有数据</td><td class="n">${fmt(x.day, x.unit)}</td><td class="n">靠补充剂</td></tr>`));
+  let gr = low.map(x => `<tr><td>${x.name}</td><td class="n">${fmt(x.have, x.unit)}</td><td class="n">${fmt(x.day, x.unit)}</td><td class="n bad">还差 ${x.gap < 0.01 ? "不到 0.01 " + x.unit : fmt(x.gap, x.unit)}（${Math.round(x.pct*100)}%）</td></tr>`);
+  gr = gr.concat(high.map(x => `<tr><td>${x.name}</td><td class="n">${fmt(x.have, x.unit)}</td><td class="n">最多 ${fmt(x.maxDay, x.unit)}</td><td class="n bad">超过上限：${x.name === "铜" ? "牛肝含铜很多，换鸡肝或不加内脏" : x.name === "维生素 D" ? "三文鱼维生素 D 很高，换别的肉或只少量用" : "减少含这种营养多的食材"}</td></tr>`));
+  gr = gr.concat(nod.map(x => `<tr><td>${x.name}</td><td class="n">没有数据</td><td class="n">${fmt(x.day, x.unit)}</td><td class="n">勾上“用补充包”</td></tr>`));
+  $("gapH").textContent = sel.pack ? "加了补充包以后还差的" : "还要靠复合维生素矿物质补的";
   if (!low.length && !high.length) gr.unshift('<tr><td colspan="4" class="ok">食材 + 上面的补充剂已经把有数据的营养都补齐了。</td></tr>');
   $("gapT").innerHTML = "<thead><tr><th>营养</th><th>配方提供</th><th>每天至少</th><th>情况</th></tr></thead><tbody>" + gr.join("") + "</tbody>";
   const cr = m.check.filter(x => x.st !== "skip").map(x => {
-    const tag = x.st === "ok" ? '<td class="n ok">达标</td>' : x.st === "low" ? `<td class="n bad">${Math.round(x.pct*100)}%</td>` : x.st === "high" ? '<td class="n bad">超上限</td>' : '<td class="n">无数据</td>';
+    const tag = x.st === "ok" ? `<td class="n ok">达标${x.packOnly ? "（只算了补充包）" : ""}</td>` : x.st === "low" ? `<td class="n bad">${Math.round(x.pct*100)}%</td>` : x.st === "high" ? '<td class="n bad">超上限</td>' : '<td class="n">无数据</td>';
     return `<tr><td>${x.name}</td><td class="n">${fmt(x.have, x.unit)}</td><td class="n">${fmt(x.day, x.unit)}</td><td class="n">${fmt(x.maxDay, x.unit)}</td>${tag}</tr>`;
   });
   $("chkT").innerHTML = "<thead><tr><th>营养</th><th>配方提供</th><th>每天至少</th><th>每天最多</th><th>情况</th></tr></thead><tbody>" + cr.join("") + "</tbody>";
 }
 
 document.getElementById("f").addEventListener("input", render);
+let atResults = false;
+$("mbarB").addEventListener("click", () => {
+  const target = atResults ? $("f") : $("recipeBox");
+  target.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start"});
+});
+new IntersectionObserver(es => { es.forEach(e => { atResults = e.isIntersecting || e.boundingClientRect.top < 0; $("mbarB").textContent = atResults ? "改信息 ↑" : "看配方 ↓"; }); }).observe($("recipeBox"));
 document.getElementById("f").addEventListener("submit", e => e.preventDefault());
 render();
 </script>
