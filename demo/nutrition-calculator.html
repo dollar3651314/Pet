@@ -85,6 +85,8 @@ details .tablebox{border:0;border-top:1px solid var(--line);border-radius:0 0 8p
   .mbar button{font:inherit;font-weight:600;border:0;border-radius:6px;padding:8px 14px;background:var(--accent);color:var(--panel);cursor:pointer}
   body{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))}
 }
+.trustbody{padding:0 14px 12px;font-size:14px;display:flex;flex-direction:column;gap:6px}
+.trustbody p{margin:0}
 .tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:4px;border:1px solid var(--line);color:var(--muted);margin-left:4px;vertical-align:1px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -158,6 +160,13 @@ details .tablebox{border:0;border-top:1px solid var(--line);border-radius:0 0 8p
         </div>
         <div class="sep" role="separator"></div>
         <span class="legend big">用食材配一份（自动算克数）</span>
+        <fieldset>
+          <span class="legend">称重方式</span>
+          <div class="seg">
+            <label><input type="radio" name="wmode" value="raw" checked>生重（下锅前称）</label>
+            <label><input type="radio" name="wmode" value="cooked">熟重（做好后称）</label>
+          </div>
+        </fieldset>
         <div class="field"><label for="s_meat">肉</label><select id="s_meat"></select></div>
         <div class="field"><label for="s_carb">主食</label><select id="s_carb"></select></div>
         <div class="field"><span class="legend">蔬菜（最多两种）</span>
@@ -194,6 +203,15 @@ details .tablebox{border:0;border-top:1px solid var(--line);border-radius:0 0 8p
           <div class="tablebox"><table id="chkT"></table></div>
         </details>
       </div>
+      <details id="trust">
+        <summary>这些数字靠不靠谱？</summary>
+        <div class="trustbody">
+          <p><strong>来自权威标准、原文核对过的：</strong>热量公式（美国宠物营养联盟 PNA；欧洲 FEDIAF 2024）；每 1000 kcal 的营养最低量和上限（FEDIAF 2024 表 III-3b，它以美国国家研究委员会 NRC 2006《狗和猫的营养需要》为基础）；食材营养（美国农业部 FoodData Central）。</p>
+          <p><strong>我们自己设的假设（还没请专家审）：</strong>蛋白质占热量 30%（幼犬 35%）、内脏 5%、鸡蛋 10%、蔬菜每 kcal 0.1 g；生熟换算方法；补充包剂量。</p>
+          <p><strong>还没做的：</strong>兽医营养师审核；用中国食材数据；和教科书逐项对照；把做好的饭送实验室检测。</p>
+          <p>版本 v0.3 · 2026-11-04。演示用，不能代替兽医。</p>
+        </div>
+      </details>
       <div class="foot">
         <span><strong>怎么算的：</strong>①静息热量 RER = 70 × 体重<sup>0.75</sup>；成年犬每天热量 = RER × 系数（已绝育 1.6、未绝育 1.8、活动少 1.4、减重 1.0，来自 PNA）。②幼犬用 FEDIAF 公式 (254.1 − 135 × 现体重 / 成年体重) × 现体重<sup>0.75</sup>。③每天的营养目标 = 每天热量 × FEDIAF 2024 表 III-3b 每 1000 kcal 的标准。</span>
         <span><strong>配方怎么算的：</strong>蛋白质按热量的 30%（幼犬 35%）、且不低于最低值的 1.2 倍来定肉的克数；内脏占 5% 热量、鸡蛋 10%、蔬菜按每 kcal 0.1 g；油补足亚油酸和脂肪；剩下的热量给主食。再用磷酸氢钙补磷、碳酸钙补钙（钙磷比按上表）、食盐补钠。食材营养来自美国农业部 FoodData Central（SR Legacy，公共领域数据），数据库里没有的按 0 算；碘、氯和氨基酸没有核对。<strong>这些比例是演示用的假设，不是兽医配方。</strong></span>
@@ -330,6 +348,11 @@ const FOODS_RAW=[
 
 // 美国农业部 FoodData Central（SR Legacy 2018）每 100 g 的营养；数据库里没有记录的按 0 算（保守）
 const FOODS = FOODS_RAW.map(r => { const o = {id:r[0], n:r[1], c:r[2]}; FK.forEach((k,i) => o[k] = r[3+i]); return o; });
+// 生重换算：1 g 熟重 = y g 生重。用 USDA 同一食材的生、熟两组数据算：肉蛋内脏按蛋白质不变，主食蔬菜按热量不变（推断方法）
+const RAW_Y = {171477:1.379,172388:1.259,171794:1.422,168250:1.249,175168:1.082,171956:1.282,172544:1.495,173424:1.002,171061:1.446,168626:1.428,
+  168878:0.356,169704:0.335,168484:0.884,170440:1.246,170072:0.983,168449:0.769,170394:0.854,169967:1.029,168463:1.0,169976:0.92,170420:1.037};
+FOODS.forEach(f => { f.y = RAW_Y[f.id] || 1; });
+const RAW_NAME = n => n.replace("（熟）", "").replace("（煮熟）", "").replace("（去皮，熟）", "（去皮）").replace("白米饭", "白米（生米）").replace("糙米饭", "糙米（生米）").replace("（90%瘦，熟）", "（90%瘦）");
 const F = id => FOODS.find(x => x.id === +id);
 // FEDIAF 营养名 → 食材数据里的字段
 const CODE = {"蛋白质":"protein","脂肪":"fat","亚油酸（ω-6）":"la","花生四烯酸（ω-6）":"ara","α-亚麻酸（ω-3）":"ala","EPA + DHA（ω-3）":"epadha",
@@ -539,19 +562,20 @@ function renderRecipe(p, r, t){
   const sel = {meat:$("s_meat").value, carb:$("s_carb").value, veg:[$("s_veg1").value, $("s_veg2").value],
     organ:$("s_organ").value || null, oil:$("s_oil").value, egg:$("s_egg").checked, fish:$("s_fish").checked, pack:$("s_pack").checked};
   const m = formulate(r, t, sel);
+  const raw = document.querySelector("input[name=wmode]:checked").value === "raw";
   const meals = (r.stage === "early" || r.stage === "late") ? "分 3～4 顿" : "分 2 顿";
   let note = `<div class="banner note"><strong>每天合计约 ${Math.round(m.kcal)} kcal</strong>，蛋白质占 ${Math.round(m.protPct*100)}%、脂肪占 ${Math.round(m.fatPct*100)}%，钙磷比 ${m.ratio ? m.ratio.toFixed(2) : "—"}:1。${meals}。<ul>`;
-  note += "<li>克数都是<strong>做熟以后</strong>的重量（燕麦片是生重）。</li>";
+  note += raw ? "<li>克数是<strong>下锅前的生重</strong>（肉去骨去皮，米是干米）。营养按煮熟后的数据算，已经扣掉了烹饪损失。换算系数来自美国农业部同一食材的生、熟数据，做法不同（炖、蒸、炒）会有几个百分点的误差。</li>" : "<li>克数是<strong>做熟以后</strong>的重量（燕麦片是生重）。</li>";
   if (m.fatPct > 0.5) note += "<li>这种肉偏肥，脂肪超过一半热量。胖狗或胰腺炎风险高的狗换瘦一点的肉。</li>";
   if (sel.pack) note += `<li>补充包按热量用：每 1000 kcal 一份（${PACK_G} g），这只狗每天 ${(m.kcal/1000).toFixed(2)} 份。钙和磷每份配方差别大，所以没放进补充包，单独加。</li>`;
   note += "<li>补充剂用食品级的，按克数用厨房秤（0.1 g 精度）称，和饭拌匀。</li></ul></div>";
   $("recipeNote").innerHTML = note;
   const g1 = x => x >= 10 ? Math.round(x) : x.toFixed(1);
-  let rows = m.items.map(it => `<tr><td>${it.role}</td><td>${it.f.n}</td><td class="n">${g1(it.g)} g</td><td class="n">${Math.round(it.f.kcal*it.g/100)} kcal</td></tr>`);
+  let rows = m.items.map(it => `<tr><td>${it.role}</td><td>${raw ? RAW_NAME(it.f.n) : it.f.n}</td><td class="n">${g1(raw ? it.g * it.f.y : it.g)} g</td><td class="n">${Math.round(it.f.kcal*it.g/100)} kcal</td></tr>`);
   rows = rows.concat(m.supp.map(x => `<tr><td>补充剂</td><td>${x.n}</td><td class="n">${x.g.toFixed(2)} g</td><td class="n">0 kcal</td></tr>`));
-  const totalG = m.items.reduce((a, x) => a + x.g, 0) + m.supp.reduce((a, x) => a + x.g, 0);
+  const totalG = m.items.reduce((a, x) => a + (raw ? x.g * x.f.y : x.g), 0) + m.supp.reduce((a, x) => a + x.g, 0);
   rows.push(`<tr class="total"><td>合计</td><td></td><td class="n">${Math.round(totalG)} g</td><td class="n">${Math.round(m.kcal)} kcal</td></tr>`);
-  $("recT").innerHTML = "<thead><tr><th>类别</th><th>食材</th><th>每天</th><th>热量</th></tr></thead><tbody>" + rows.join("") + "</tbody>";
+  $("recT").innerHTML = `<thead><tr><th>类别</th><th>食材</th><th>每天（${raw ? "生重" : "熟重"}）</th><th>热量</th></tr></thead><tbody>` + rows.join("") + "</tbody>";
   const low = m.check.filter(x => x.st === "low");
   const nod = m.check.filter(x => x.st === "nodata");
   const high = m.check.filter(x => x.st === "high");

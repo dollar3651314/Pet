@@ -10,3 +10,4 @@
 
 ## 公开网站（给朋友用）
 构建：`node scripts/build-site.mjs` → `dist/index.html`。发布在 Cloudflare Workers（静态资源，配置见 `wrangler.jsonc`）：构建命令 `node scripts/build-site.mjs`，部署命令 `npx wrangler deploy`，分支 `claude/pet-dog-nutrition-research-an0ird`。
+- [朋友试用反馈：生重与可信度](research/05-朋友反馈-生重与可信度.md)
